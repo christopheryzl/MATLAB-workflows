@@ -75,6 +75,7 @@ Mic attribute columns for the current dataset:
 `theta`     : Polar angle,
 `phi`       : Azimuth angle,
 `r`         : Radial distance from datum
+`type`      : Microphone type (40PL, 46BE, etc.)
 
 
 ### `<group>` spectrum table
