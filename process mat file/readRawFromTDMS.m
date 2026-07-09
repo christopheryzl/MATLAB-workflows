@@ -26,6 +26,8 @@ end
 
 numResults = height(results);
 
+columnsToKeep = results(1,:);
+columnsToKeep = results(:,~contains(columnsToKeep.Properties.VariableNames,'data'));
 
 % check if one microphone is provided, reject if not
 nLoc = height(micLocation);
@@ -45,6 +47,10 @@ activeChannel = first_result_Mic.channel{1};
 rawdata = cell(numResults,1);
 duration = zeros(numResults,1);
 fs = zeros(numResults,1);
+phi = fs;
+theta = fs;
+r = fs;
+
 for i = 1:numResults
     % get sampling duration
     duration(i) = results.duration(i);
@@ -52,6 +58,11 @@ for i = 1:numResults
     thisResult = results.("noise data"){i};
     thisMic = filterMicByLocation(thisResult,micLocation);
     fs(i) = thisMic.fs;
+
+    % get position for this case's microphone
+    phi(i) = thisMic.phi;
+    theta(i) = thisMic.theta;
+    r(i) = thisMic.r;
 
     % get sensitivity (V/Pa) used to convert voltage to pressure
     Sensitivity = thisMic.sensitivity;
@@ -77,9 +88,9 @@ for i = 1:numResults
 
 end
 
-raw = table(duration,fs,VariableNames=["duration","fs"]);
+samplingFreq = table(phi,theta,r,fs,VariableNames=["phi","theta","r","fs"]);
 data = cell2table(rawdata,VariableNames="acoustic pressure");
-raw = [raw data];
+raw = [columnsToKeep samplingFreq data];
 
 
     function [thisMic] = filterMicByLocation(micTable,thisLoc)
