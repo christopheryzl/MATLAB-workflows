@@ -44,22 +44,25 @@ idx_ignore=5000;
 
 % determine appropriate MinPeakDistance guess based on the rpm delta and
 % sampling frequency
-guess_distance = 0.75*bladeN*fs*delta_rpm/60;
+guess_distance = 0.75*fs*60/(bladeN*delta_rpm);
 [~,peaks_forward] = findpeaks(double(TF(idx_ignore:end-idx_ignore)),MinPeakDistance=guess_distance);
 [~,peaks_backward] = findpeaks(flipud(double(TF(idx_ignore:end-idx_ignore))),MinPeakDistance=guess_distance);
+
+%figure for debug
+% % figure
+% % plot(phaseInfo.diff)
+% % yyaxis right
+% % hold on
+% % plot(TF)
+% % scatter(peaks_forward,ones(size(peaks_forward)))
+% % scatter(peaks_backward,ones(size(peaks_backward)))
+
 peaks_forward = peaks_forward+idx_ignore;
 peaks_backward = peaks_backward+idx_ignore;
 peaks_backward = length(TF)-peaks_backward + 1;
 peaks = [peaks_forward, flipud(peaks_backward)];
 
-% figure for debug
-% figure
-% plot(phaseInfo.phaseDiff)
-% yyaxis right
-% hold on
-% plot(TF)
-% scatter(peaks_forward,ones(size(peaks_forward)))
-% scatter(peaks_backward,ones(size(peaks_backward)))
+
 
 for i = 1:size(peaks,1)
     first_idx = find(front(peaks(i,1):end-1)-front(peaks(i,1)+1:end)>100,1,"first");
