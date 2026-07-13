@@ -45,9 +45,8 @@ function [out] = Octave_1_3(psd,f,windscreen,micType)
         end
     end
 
-    % ANSI S1.11 base-10 third-octave centres (1 kHz reference), also see
-    % wikipedia
-    fcAll     = 1000 * 10.^((-20:13)/10);
+    % ANSI S1.11 base-10 third-octave centres (see wikipedia), 16 Hz to 20 kHz
+    fcAll     = 10.^((12:43)/10);
     fLowerAll = fcAll / 10^(1/20);
     fUpperAll = fcAll * 10^(1/20);
 
