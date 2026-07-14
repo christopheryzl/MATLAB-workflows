@@ -26,7 +26,7 @@ end
 % make variable names for appended table
 appendVariableName = strings(n,1);
 for i = 1:length(appendVariableName)
-    appendVariableName(i) = "harmonic"+num2str(n);
+    appendVariableName(i) = "harmonic"+num2str(i);
 end
 
 numRows = height(results);
