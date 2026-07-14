@@ -58,6 +58,7 @@ attrsCell = cell(length(groups),length(attrsName));
 noiseData = cell(length(groups),1);
 loadData  = noiseData;
 data_enc  = noiseData;
+data_meta  = noiseData;
 
 % spectrum subgroups to read from each microphone (user input or fallback)
 if isfield(p,'SpecGroups')
@@ -83,13 +84,15 @@ for i = 1:length(groups)
     noiseData{i} = readNoiseData(fileName,thisGroup,microphones,micsAttrsName,specGroups);
     loadData{i}  = readLoadData(fileName,thisGroup);
     data_enc{i}  = readEncoderData(fileName,thisGroup);
+    data_meta{i}  = readMetadata(fileName,thisGroup);
 end
 
-attrsTable       = cell2table(attrsCell,VariableNames=attrsName);
-micTable         = cell2table(noiseData,VariableNames="noise data");
-loadDataTable    = cell2table(loadData,VariableNames="load data");
-encoderDataTable = cell2table(data_enc,VariableNames="encoder data");
+attrsTable          = cell2table(attrsCell,VariableNames=attrsName);
+micTable            = cell2table(noiseData,VariableNames="noise data");
+loadDataTable       = cell2table(loadData,VariableNames="load data");
+encoderDataTable    = cell2table(data_enc,VariableNames="encoder data");
+metaDataTable       = cell2table(data_meta,VariableNames="metadata");
 
-Results = [attrsTable,micTable,loadDataTable,encoderDataTable];
+Results = [attrsTable,micTable,loadDataTable,encoderDataTable,metaDataTable];
 
 end
