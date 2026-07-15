@@ -31,7 +31,7 @@ function [out] = Octave(psd,f,windscreen,micType)
     % windscreen correction (dB offset per frequency) before banding
     if windscreen
         if nargin < 4 || strlength(string(micType)) == 0
-            error("Octave_1_3:missingMicType", ...
+            error("Octave:missingMicType", ...
                 "windscreen is true; supply the microphone type.");
         end
         micType = string(micType);
@@ -39,7 +39,7 @@ function [out] = Octave(psd,f,windscreen,micType)
         if applied
             SPL = correctedSPL;
         else
-            warning("Octave_1_3:noWindscreenCorrection", ...
+            warning("Octave:noWindscreenCorrection", ...
                 "No windscreen correction factor for microphone type '%s'. " + ...
                 "SPL left uncorrected.",micType);
         end
