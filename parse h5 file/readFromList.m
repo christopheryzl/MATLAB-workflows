@@ -81,8 +81,21 @@ for i = 1:length(groups)
 
     % read noise, load and angular encoder data for this group
     noiseData{i} = readNoiseData(fileName,thisGroup,microphones,micsAttrsName,specGroups);
-    loadData{i}  = readLoadData(fileName,thisGroup);
-    data_enc{i}  = readEncoderData(fileName,thisGroup);
+    % need this try-catch structure since not all datasets have load or
+    % angular data
+    try
+        loadData{i}  = readLoadData(fileName,thisGroup);
+    catch
+        loadData{i} = table();
+        warning("load data not found");
+    end
+
+    try
+        data_enc{i}  = readEncoderData(fileName,thisGroup);
+    catch
+        data_enc{i} = table();
+        warning("encoder data not found");
+    end
 end
 
 attrsTable       = cell2table(attrsCell,VariableNames=attrsName);
