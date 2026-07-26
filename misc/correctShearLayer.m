@@ -17,8 +17,9 @@ function [Tc,dAP] = correctShearLayer(Tm,M,H,h)
 %   Tc = theta_cc, corrected measurement angle in degrees.
 %   dAP = delta acoustic pressure, pc/pm in dB
 
-x0 = [50,95]; %arbitrary initial guess
+x0 = [85,85]; %arbitrary initial guess
 x = fsolve(@(x) angleCorrection(x,Tm,M,H,h),x0);
+
 Tc = real(x(1));
 Tt = acosd(cosd(x(2))/(1+M*cosd(x(2))));
 dAP = 20*log10(sqrt(amplitudeCorrection(Tt,M,H,h)));
