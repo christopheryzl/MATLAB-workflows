@@ -11,7 +11,11 @@ function [out] = selectiveBin(processedRaw,interval,varargin)
 %   (optional)bladeN = determine the angle wrap, check that the
 %   processedRaw table also have this argument passed through, defaults to
 %   2
-
+%   out.meanAngle = mean front phase angle
+%   out.meanPressure = mean acoustic pressure over all bins (tonal)
+%   out.allPressure = raw pressure over all bins
+%   out.fluctPressure = pressure with mean subtracted (broadband)
+%   out.fs = new sampling frequency after fudgery
 varargs = reshape(varargin,2,[]);
 p = struct(varargs{:});
 
