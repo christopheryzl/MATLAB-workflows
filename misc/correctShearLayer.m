@@ -1,24 +1,36 @@
 function [Tc,dAP] = correctShearLayer(Tm,M,H,h)
 %shearLayerCorrection outputs the corrected observer angle in degrees and
 %the delta acoustic pressure amplitude pc/pm in dB
-%
-% The shear layer correction is based on Amiet's method assuming
-% zero-thickness shear layer and no loss to turbulent shear layer
-% scattering
-%
-%   Tm = theta_m, uncorrected measurement angle in degrees.
-%   M = Mach number, Mach number of freestream inside the shear layer
-%   H = total height, distance from source to uncorrected measurement
-%   location, taken perpendicular to the shear layer
-%   h = shear layer height, distance from source to shear layer, taken
-%   perpendicular to the shear layer
-%
-% outputs
-%   Tc = theta_cc, corrected measurement angle in degrees.
-%   dAP = delta acoustic pressure, pc/pm in dB
 
-x0 = [85,85]; %arbitrary initial guess
-x = fsolve(@(x) angleCorrection(x,Tm,M,H,h),x0);
+% 1. Dynamically scale the number of continuation steps to save time
+dist_from_center = abs(Tm - 90);
+if dist_from_center <= 45
+    num_steps = 1; % Jump directly to the answer near 90 deg
+else
+    num_steps = 5; % Use only 5 steps (down from 15) for the steep boundaries
+end
+
+tm_steps = linspace(90, Tm, num_steps);
+
+% 2. Safe, fixed baseline initial guess at 90 degrees
+x0 = [90, 90]; 
+
+lb = [0.01, 0.01];
+ub = [179.99, 179.99];
+
+% 3. Tighten optimization tolerances slightly to terminate steps faster
+options = optimoptions('lsqnonlin', ...
+    'Display', 'off', ...
+    'FunctionTolerance', 1e-5, ...
+    'StepTolerance', 1e-5, ...
+    'MaxIterations', 25); % Prevents the solver from wandering endlessly
+
+% 4. Step to the target angle
+for t = tm_steps
+    x0 = lsqnonlin(@(x) angleCorrection(x, t, M, H, h), x0, lb, ub, options);
+end
+
+x = x0;
 
 Tc = real(x(1));
 Tt = acosd(cosd(x(2))/(1+M*cosd(x(2))));
@@ -26,23 +38,70 @@ dAP = 20*log10(sqrt(amplitudeCorrection(Tt,M,H,h)));
 
 
     function F = angleCorrection(x,Tm,M,H,h)
-        % nonlinear system of equations to solve for x (eqn. 17.2.16, 17.2.17,
-        % 17.2.19 Aeroacoustics of Low Mach Number Flows)
+        % Guard rails to prevent complex numbers near boundaries
+        term1 = max(0.0001, (secd(x(2))+M)^2-1);
+        term2 = max(0.0001, cscd(x(1))^2-M^2);
 
-        % x(1) -> theta_m
-        % x(2) -> theta_i
-
-        F(1) = H*cotd(Tm) - h*cotd(x(1)) - (H-h)*(1/(sign(secd(x(2)))*sqrt((secd(x(2))+M)^2-1)));
-        F(2) = tand(x(2)/2) - (1/(1-M))*(sqrt(cscd(x(1))^2-M^2)-cotd(x(1)));
+        F(1) = H*cotd(Tm) - h*cotd(x(1)) - (H-h)*(1/(sign(secd(x(2)))*sqrt(term1)));
+        F(2) = tand(x(2)/2) - (1/(1-M))*(sqrt(term2)-cotd(x(1)));
     end
 
     function PCoverPm2 = amplitudeCorrection(Tt,M,H,h)
-        % calculates the square of Pc^/Pm^ (eqn. 17.2.30 Aeroacoustics of Low Mach
-        % Number Flows)
-
         xi = sqrt((1-M.*cosd(Tt)).^2-cosd(Tt).^2);
-
         PCoverPm2 = (1./(4.*xi.^2)) .* (h/H)^2 .* (1+(H-h)/h.*(xi.^3)./(sind(Tt).^3)) .* (1+(H-h)/h.*(xi)./sind(Tt)) .* ...
             (xi+sind(Tt).*(1-M.*cosd(Tt)).^2).^2;
     end
 end
+
+
+
+%%%% old implementation with fsolve, not very stable
+
+% function [Tc,dAP] = correctShearLayer(Tm,M,H,h)
+% %shearLayerCorrection outputs the corrected observer angle in degrees and
+% %the delta acoustic pressure amplitude pc/pm in dB
+% %
+% % The shear layer correction is based on Amiet's method assuming
+% % zero-thickness shear layer and no loss to turbulent shear layer
+% % scattering
+% %
+% %   Tm = theta_m, uncorrected measurement angle in degrees.
+% %   M = Mach number, Mach number of freestream inside the shear layer
+% %   H = total height, distance from source to uncorrected measurement
+% %   location, taken perpendicular to the shear layer
+% %   h = shear layer height, distance from source to shear layer, taken
+% %   perpendicular to the shear layer
+% %
+% % outputs
+% %   Tc = theta_cc, corrected measurement angle in degrees.
+% %   dAP = delta acoustic pressure, pc/pm in dB
+% 
+% x0 = [85,85]; %arbitrary initial guess
+% x = fsolve(@(x) angleCorrection(x,Tm,M,H,h),x0);
+% 
+% Tc = real(x(1));
+% Tt = acosd(cosd(x(2))/(1+M*cosd(x(2))));
+% dAP = 20*log10(sqrt(amplitudeCorrection(Tt,M,H,h)));
+% 
+% 
+%     function F = angleCorrection(x,Tm,M,H,h)
+%         % nonlinear system of equations to solve for x (eqn. 17.2.16, 17.2.17,
+%         % 17.2.19 Aeroacoustics of Low Mach Number Flows)
+% 
+%         % x(1) -> theta_m
+%         % x(2) -> theta_i
+% 
+%         F(1) = H*cotd(Tm) - h*cotd(x(1)) - (H-h)*(1/(sign(secd(x(2)))*sqrt((secd(x(2))+M)^2-1)));
+%         F(2) = tand(x(2)/2) - (1/(1-M))*(sqrt(cscd(x(1))^2-M^2)-cotd(x(1)));
+%     end
+% 
+%     function PCoverPm2 = amplitudeCorrection(Tt,M,H,h)
+%         % calculates the square of Pc^/Pm^ (eqn. 17.2.30 Aeroacoustics of Low Mach
+%         % Number Flows)
+% 
+%         xi = sqrt((1-M.*cosd(Tt)).^2-cosd(Tt).^2);
+% 
+%         PCoverPm2 = (1./(4.*xi.^2)) .* (h/H)^2 .* (1+(H-h)/h.*(xi.^3)./(sind(Tt).^3)) .* (1+(H-h)/h.*(xi)./sind(Tt)) .* ...
+%             (xi+sind(Tt).*(1-M.*cosd(Tt)).^2).^2;
+%     end
+% end
