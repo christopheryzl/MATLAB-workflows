@@ -10,6 +10,9 @@ function [results] = findHarmonics(results,specGroup,varargin)
 %   performed, string
 %   (optional)n: harmonic number upper range, default = 5
 %   (optional)bladeN: blade number, default = 2
+%   (optional)windscreen: boolean, apply windscreen correction, reads
+%   microphone type from results table and if windscreen should be applied.
+%   h5 file must have windscreen attribute
 varargs = reshape(varargin,[],2);
 p = struct(varargs{:});
 
@@ -23,6 +26,14 @@ if isfield(p,"n")
 else
     n = 5;
 end
+
+% pass windscreen correction as boolean, defaults to false
+if isfield(p,"windscreen")
+    windscreen = p.windscreen;
+else
+    windscreen = false;
+end
+
 % make variable names for appended table
 appendVariableName = strings(n,1);
 for i = 1:length(appendVariableName)
@@ -38,6 +49,16 @@ for i = 1:numRows
     for j = 1:numMics
         F = results.("noise data"){i}.(specGroup){j}.f;
         PSD = results.("noise data"){i}.(specGroup){j}.psd;
+        if windscreen && matches(results.("noise data"){i}.windscreen(j),'TRUE')
+            % check each microphone if windscreen correction should be
+            % applied
+
+            [PSD,message] = correctWindscreenPSD(F,PSD,results.("noise data"){i}.type{j});
+            if ~message
+                display("windscreen not applied for microphone type "+results.("noise data"){i}.type{j});
+            end
+
+        end
         for k = 1:n
             % find closest index to the harmonic
             [~,Harmidx] = min(abs(F-k*BPF));

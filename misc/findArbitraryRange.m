@@ -19,6 +19,12 @@ else
     appendVariableName = "broadband";
 end
 
+% pass windscreen correction as boolean, defaults to false
+if isfield(p,"windscreen")
+    windscreen = p.windscreen;
+else
+    windscreen = false;
+end
 
 numRows = height(results);
 for i = 1:numRows
@@ -28,7 +34,16 @@ for i = 1:numRows
     for j = 1:numMics
         F = results.("noise data"){i}.(specGroup){j}.f;
         PSD = results.("noise data"){i}.(specGroup){j}.psd;
+        if windscreen && matches(results.("noise data"){i}.windscreen(j),'TRUE')
+            % check each microphone if windscreen correction should be
+            % applied
 
+            [PSD,message] = correctWindscreenPSD(F,PSD,results.("noise data"){i}.type{j});
+            if ~message
+                display("windscreen not applied for microphone type "+results.("noise data"){i}.type{j});
+            end
+
+        end
         % find closest index to the minimum
         [~,minidx] = min(abs(F-f_range(1)));
         % to maximum
