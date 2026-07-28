@@ -11,6 +11,16 @@ function [loadTable] = readLoadData(fileName,thisGroup)
 %   torque    = readGroupByName(fileName,loadGroup,"torque");
 %   loadTable = table(thrust,torque,VariableNames=["thrust","torque"]);
 
-loadTable = table();
+loadMask  = contains({thisGroup.Groups.Name},["rotor","inboard","outboard"]);
+loadGroups = thisGroup.Groups(loadMask);
+
+for i = 1:length(loadGroups)
+    % get the load group name, used in table variable
+    name_split = split(loadGroups(i).Name,'/');
+    groupName(i) = string(name_split{end});
+    Thrust(i) = readGroupByName(fileName,loadGroups(i),"Fz");
+    Torque(i) = readGroupByName(fileName,loadGroups(i),"Tz");
+end
+loadTable = table(groupName',Thrust',Torque',VariableNames=["name","thrust","torque"]);
 
 end
