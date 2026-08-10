@@ -5,6 +5,11 @@ function [results] = findHarmonics(results,specGroup,varargin)
 % harmonic SPLs appended in then noise data as "harmonic1","harmonic2",
 % etc.
 %
+%   known issue: if mic number is 1 the results collapses into a table
+%   instead of cell structure, so the height function and subsequent data
+%   extraction will not work. Workaround is to have at least two
+%   microhpones in the results... 
+%
 %   results: results table from readFromList
 %   specGroup: spectral group from which the narrowband integration will be
 %   performed, string
