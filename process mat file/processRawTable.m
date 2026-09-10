@@ -54,16 +54,11 @@ rear_upsampled = interp1(time_angle,rear,time_upsampled);
 front_upsampled = mod(front_upsampled,360);
 rear_upsampled = mod(rear_upsampled,360);
 
-%wrap angle for n-bladed propellers
-angle_wrap = 360/bladeN;
-
 Diff = front_upsampled-rear_upsampled;
 Diff(Diff<0) = Diff(Diff<0)+360;
 Diff(Diff>180) = Diff(Diff>angle_wrap)-angle_wrap;
 frontPhase = front_upsampled;
-frontPhase(frontPhase>angle_wrap) = frontPhase(frontPhase>angle_wrap)-angle_wrap;
 rearPhase = rear_upsampled;
-rearPhase(rearPhase>angle_wrap) = rearPhase(rearPhase>angle_wrap)-angle_wrap;
 phaseInfo = table(time_upsampled',Diff',frontPhase',rearPhase',VariableNames=["time","diff","front","rear"]);
 
 % Conversion to source time
