@@ -54,6 +54,9 @@ rear_upsampled = interp1(time_angle,rear,time_upsampled);
 front_upsampled = mod(front_upsampled,360);
 rear_upsampled = mod(rear_upsampled,360);
 
+% angle wrap for phase difference
+angle_wrap = 360/bladeN;
+
 Diff = front_upsampled-rear_upsampled;
 Diff(Diff<0) = Diff(Diff<0)+360;
 Diff(Diff>180) = Diff(Diff>angle_wrap)-angle_wrap;

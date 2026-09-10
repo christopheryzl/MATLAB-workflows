@@ -92,7 +92,7 @@ peaks = peaks(1:end,:);
 % end
 
 % normalised length for a single bin
-normalised_length = ceil(60/(rpm*bladeN)*fs);
+normalised_length = ceil(60/(rpm)*fs);
 
 x_mean = zeros(size(peaks,1),normalised_length);
 y_mean = zeros(size(peaks,1),normalised_length);
@@ -113,8 +113,8 @@ for i = 1:size(peaks,1)
 
     % calculate and trim bin size
     bin_sizes = ends_idx-starts_idx+1;
-    starts_idx = starts_idx(bin_sizes >= (0.75*60/(rpm*bladeN))/(1/fs));
-    bin_sizes = bin_sizes(bin_sizes >= (0.75*60/(rpm*bladeN))/(1/fs));
+    starts_idx = starts_idx(bin_sizes >= (0.75*60/(rpm))/(1/fs));
+    bin_sizes = bin_sizes(bin_sizes >= (0.75*60/(rpm))/(1/fs));
     %max_len = max(bin_sizes);
     
     %max_len = 500;
@@ -138,6 +138,6 @@ out.meanAngle = mean(x_mean,1);
 out.meanPressure = mean(y_mean,1);
 out.allPressure = all_Interval_Pressure(2:end,:);
 out.fluctPressure = out.allPressure-out.meanPressure;
-out.fs = floor(normalised_length*rpm/(60/bladeN));
+out.fs = floor(normalised_length*rpm/(60));
 end
 
