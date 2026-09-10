@@ -77,7 +77,7 @@ end
 
 % remove peak ranges that are too short (noise)
 lengths = peaks(:,2)-peaks(:,1)+1;
-peaks = peaks(lengths>1000,:);
+peaks = peaks(lengths>200,:);
 % remove first and last peaks to prevent overflow
 peaks = peaks(1:end,:);
 % ax.ColorOrderIndex=1;
