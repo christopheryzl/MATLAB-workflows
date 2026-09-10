@@ -7,7 +7,8 @@ function [Results] = readFromList(fileName,groups,varargin)
 % optional arguments:
 %Mics: scalar or numeric array, specifies the mic to read from the name
 %(Mics are named as Mic1, Mic2, etc in the h5 file, so you first need to
-%know the group structure.
+%know the group structure. Use an empty array in case you don't need to
+%read any microphone data.
 varargs = reshape(varargin,2,[]);
 p = struct(varargs{:});
 
@@ -25,17 +26,21 @@ availableNums = str2double(erase(lower(availableMics),"mic"));
 availableMics = availableMics(order);
 
 if isfield(p,'Mics')
-    MicList = p.Mics(:)';
-    % validate that every requested mic exists in the file
-    missing = setdiff(MicList,availableNums);
-    if ~isempty(missing)
-        error("readFromList:micNotAvailable", ...
-            "Requested microphone(s) not available in file: %s. Available: %s", ...
-            mat2str(missing),mat2str(availableNums));
+    if ~isempty(p.Mics)
+        MicList = p.Mics(:)';
+        % validate that every requested mic exists in the file
+        missing = setdiff(MicList,availableNums);
+        if ~isempty(missing)
+            error("readFromList:micNotAvailable", ...
+                "Requested microphone(s) not available in file: %s. Available: %s", ...
+                mat2str(missing),mat2str(availableNums));
+        end
+        % map requested indices to the actual (case-preserved) mic names
+        [~,idx] = ismember(MicList,availableNums);
+        microphones = availableMics(idx);
+    else
+        microphones = [];
     end
-    % map requested indices to the actual (case-preserved) mic names
-    [~,idx] = ismember(MicList,availableNums);
-    microphones = availableMics(idx);
 else
     microphones = availableMics;
 end
@@ -67,9 +72,11 @@ else
     specGroups = ["df1","df4"];   % fallback: original hard-coded groups
 end
 
-% make microphone variable names
-micFirstGroup = find(strcmp({groups(1).Groups.Name},groups(1).Name+"/"+microphones(1)));
-micsAttrsName = string({groups(1).Groups(micFirstGroup).Attributes.Name});
+if ~isempty(microphones)
+    % make microphone variable names
+    micFirstGroup = find(strcmp({groups(1).Groups.Name},groups(1).Name+"/"+microphones(1)));
+    micsAttrsName = string({groups(1).Groups(micFirstGroup).Attributes.Name});
+end
 
 % iterate over all groups
 for i = 1:length(groups)
@@ -79,14 +86,17 @@ for i = 1:length(groups)
     for j = 1:length(thisGroup.Attributes)
         attrsCell{i,j} = readAttrsByName(thisGroup,attrsName(j));
     end
-
-    % read noise, load and angular encoder data for this group
-    noiseData{i} = readNoiseData(fileName,thisGroup,microphones,micsAttrsName,specGroups);
-    data_meta{i}  = readMetadata(fileName,thisGroup);
+    
+    if ~isempty(microphones)
+        % read noise data for this group
+        noiseData{i} = readNoiseData(fileName,thisGroup,microphones,micsAttrsName,specGroups);
+        data_meta{i}  = readMetadata(fileName,thisGroup);
+    end
 
     % need this try-catch structure since not all datasets have load or
     % angular data
     try
+        % load
         loadData{i}  = readLoadData(fileName,thisGroup);
     catch
         loadData{i} = table();
@@ -94,6 +104,7 @@ for i = 1:length(groups)
     end
 
     try
+        % angular encoder
         data_enc{i}  = readEncoderData(fileName,thisGroup);
     catch
         data_enc{i} = table();
