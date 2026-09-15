@@ -59,10 +59,11 @@ angle_wrap = 360/bladeN;
 
 Diff = front_upsampled-rear_upsampled;
 Diff(Diff<0) = Diff(Diff<0)+360;
+diff_360 = Diff;
 Diff(Diff>180) = Diff(Diff>angle_wrap)-angle_wrap;
 frontPhase = front_upsampled;
 rearPhase = rear_upsampled;
-phaseInfo = table(time_upsampled',Diff',frontPhase',rearPhase',VariableNames=["time","diff","front","rear"]);
+phaseInfo = table(time_upsampled',Diff',diff_360',frontPhase',rearPhase',VariableNames=["time","diff","diff_360","front","rear"]);
 
 % Conversion to source time
 Fs_mic = raw.fs;
