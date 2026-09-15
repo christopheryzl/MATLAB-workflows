@@ -7,8 +7,12 @@ function [results] = findArbitraryRange(results,specGroup,f_range,varargin)
 %   results: results table from readFromList
 %   specGroup: spectral group from which the SPL integration will be
 %   performed, string
-%   f_range: [lower limit, upper limit] integration range
+%   f_range: [lower limit, upper limit] integration range, alternatively,
+%   give the f_range as a nx2 vector, i.e. [lower limit 1, uppter limit 1;
+%   ... ;lower limit n, upper limit n]
 %   (optional) name: name for exported table column (string), default: broadband
+%   (optional) windscreen: boolean true if windscreen correction should be
+%   applied
 
 varargs = reshape(varargin,[],2);
 p = struct(varargs{:});
@@ -44,12 +48,25 @@ for i = 1:numRows
             end
 
         end
+        [n,~] = size(f_range);
+        if n == 1
         % find closest index to the minimum
         [~,minidx] = min(abs(F-f_range(1)));
         % to maximum
         [~,maxidx] = min(abs(F-f_range(2)));
         % narrowband integration
         to_append(j) = 10*log10((trapz(F(minidx:maxidx),PSD(minidx:maxidx)))/2e-5^2);
+        else
+            psd_chunk = zeros(n,1);
+            for k = 1:n
+                % find closest index to the minimum
+                [~,minidx] = min(abs(F-f_range(k,1)));
+                % to maximum
+                [~,maxidx] = min(abs(F-f_range(k,2)));
+                psd_chunk(k) = trapz(F(minidx:maxidx),PSD(minidx:maxidx));
+            end
+        to_append(j) = 10*log10(sum(psd_chunk)/2e-5^2);
+        end
 
     end
     % return table
