@@ -26,13 +26,16 @@ else
 end
 
 phaseInfo = processedRaw.phaseInfo{1};
-sourceTimePressure = processedRaw.sourceTimePressure{1};
 
 phase_diff = phaseInfo.diff;
 front = phaseInfo.front;
 fs = double(processedRaw.fs);
 rpm = processedRaw.rpm;
 delta_rpm = processedRaw.delta_rpm;
+
+sourceTimePressure = processedRaw.sourceTimePressure{1};
+sourceTimePressure.Pressure = highpass(sourceTimePressure.Pressure,160,fs);
+
 
 % check for if phase range wrapped around zero
 angle_domain = 360/bladeN;
@@ -101,7 +104,6 @@ for i = 1:size(peaks,1)
     interval_Phase = phaseInfo(peaks(i,1):peaks(i,2),:);
     [~,time_offset] = min(abs(sourceTimePressure.time-0));
     interval_Pressure = sourceTimePressure(peaks(i,1)+time_offset:peaks(i,2)+time_offset,:);
-    interval_Pressure.Pressure = highpass(interval_Pressure.Pressure,160,fs);
 
     % find wrap cycle
     wrap_idx = find(diff(interval_Phase.front)< -160);
