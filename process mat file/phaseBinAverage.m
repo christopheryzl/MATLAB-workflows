@@ -37,6 +37,11 @@ function [out_legacy,out] = phaseBinAverage(processed_raw,psi_c,psi_width, opts)
 %     AngleWrapped true (default) if psi is wrapped and must be unwrapped
 %                  before interpolation onto tx.
 %     n_blade      2 (default) int16 scalar, number of blades
+%     debug        'on' (default) 'on' or 'off', displays debug figure when
+%                  turned on
+%     BinMethod    'nominal' (default), 'nominal' or 'front', choose which
+%                  phase angle to use as reference when depositing pressure
+%                  to the angular grid
 %
 %   OUTPUT (struct)
 %     theta     [nb x 1]  bin centres (deg)
@@ -71,6 +76,7 @@ arguments
     opts.AngleWrapped     (1,1) logical = true
     opts.n_blade          (1,1) double = 2
     opts.debug            (1,:) char {mustBeMember(opts.debug,{'on','off'})} = 'on'
+    opts.BinMethod        (1,:) char {mustBeMember(opts.BinMethod,{'front','nominal'})} = 'nominal';
 end
 %import variables from raw table
 %I will trim the angle and pressure so they are defined over the same
@@ -89,7 +95,15 @@ psi_1 = phase_table.front;
 
 psi_blade = 360/opts.n_blade;
 
-valid = abs(mod(psi - psi_c + psi_blade/2, psi_blade) - psi_blade/2) <= half_width;
+% this calculates how far away the current relative phase angle is from 
+% the centre psi
+% the distance is measured from psi_c, centred at 0 degrees relative
+% the sign is kept: positive when psi is above psi_c, negative when below,
+% wrapped to [-psi_blade/2, psi_blade/2). It is zero if the rotors were
+% phase-locked at psi_c, and each rotor is displaced by half of it
+dpsi_from_lock = mod(psi - psi_c + psi_blade/2, psi_blade) - psi_blade/2;
+% boolean mask for the whole signal series, only the distance is needed here
+valid = abs(dpsi_from_lock) <= half_width;
 
 if matches(opts.debug,'on')
     % debug figure
@@ -118,46 +132,72 @@ dth = opts.Period/n_bins;
 n_channels  = size(pressure,2);
 
 % ------------------------------------------- angle onto the data timebase
+p = psi_1;
+if opts.AngleWrapped
+    % unwrap BEFORE interpolating or subtracting the offset,
+    % never interpolate across a 360 jump
+    p = rad2deg(unwrap(deg2rad(psi_1)));
+end
 if isequal(t_psi, t_pressure)
-    psiX = psi_1;
-    if opts.AngleWrapped
-        psiX = rad2deg(unwrap(deg2rad(psi_1)));
-    end
+    dpl = dpsi_from_lock;
 else
     if any(diff(t_psi) <= 0)
         error('phaseBinAverage:tpsi','tpsi must be strictly increasing.');
     end
-    p = psi_1;
-    if opts.AngleWrapped
-        p = rad2deg(unwrap(deg2rad(psi_1)));   % unwrap BEFORE interpolating,
-    end                                      % never interpolate across a 360 jump
-    psiX = interp1(t_psi, p, t_pressure, 'linear', NaN);
+    p     = interp1(t_psi, p, t_pressure, 'linear', NaN);
+    % nearest-neighbour so the offset is never blended across its wraps
+    dpl   = interp1(t_psi, dpsi_from_lock, t_pressure, 'nearest', NaN);
+    valid = interp1(t_psi, double(valid),  t_pressure, 'nearest', 0) > 0;
+end
+
+switch opts.BinMethod
+    case 'front'
+        %%%%%%% note %%%%%%%
+        % old implementation with psi_1 wrapping
+        % this wraps around psi_1, which does not have the same period as
+        % the psi_bar associated with the nominal rpm
+        % the rear rotor carries all of dpsi_from_lock
+
+        psiX = p;
+    case 'nominal'
+        %%%%%%% note %%%%%%%
+        % new Claude-suggested implementation
+        % Claude suggests wrapping the angle according to the psi_bar instead
+        % so the samples are correctly binned according to the carrier wave
+        % equal to (f_1+f_2)/2
+        % psi_1 - dpsi_from_lock/2 advances at the psi_bar rate but stays
+        % on the psi_1 axis (it equals psi_bar + psi_c/2), so the result
+        % lines up with phase-locked data plotted against psi_1
+        % the offset is split equally between the two rotors
+
+        psiX = p - dpl/2;
 end
 
 % ------------------------------------------------------------ valid mask
 if islogical(valid)
-    m = valid(:);
-    if numel(m) ~= numel(t_pressure)
+    mask = valid(:);
+    if numel(mask) ~= numel(t_pressure)
         error('phaseBinAverage:mask','logical valid must be the length of tx.');
     end
 else
     if size(valid,2) ~= 2
         error('phaseBinAverage:intervals','interval form of valid must be [M x 2].');
     end
-    m = false(size(t_pressure));
+    mask = false(size(t_pressure));
     for k = 1:size(valid,1)
-        m = m | (t_pressure >= valid(k,1) & t_pressure <= valid(k,2));
+        mask = mask | (t_pressure >= valid(k,1) & t_pressure <= valid(k,2));
     end
 end
-m = m & isfinite(psiX) & all(isfinite(pressure),2);
+mask = mask & isfinite(psiX) & all(isfinite(pressure),2);
 
 % --------------------------------------------------- contiguous segments
-d  = diff([false; m; false]);
+d  = diff([false; mask; false]);
 s0 = find(d ==  1);
 s1 = find(d == -1) - 1;
 len = s1 - s0 + 1;
 keep = len >= opts.MinSegment;
-s0 = s0(keep); s1 = s1(keep);
+s0 = s0(keep); 
+s1 = s1(keep);
 nSeg = numel(s0);
 if nSeg == 0
     error('phaseBinAverage:empty','No valid segment longer than MinSegment samples.');

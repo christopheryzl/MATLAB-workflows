@@ -10,6 +10,8 @@ function [out] = directBin(processedRaw,varargin)
 %   (optional)bladeN = determine the angle wrap, check that the
 %   processedRaw table also have this argument passed through, defaults to
 %   2
+%   (optional)phaseShift = apply a fudge factor until I can check the
+%   offset angles for all the test cases
 %   out.meanAngle = mean front phase angle
 %   out.meanPressure = mean acoustic pressure over all bins (tonal)
 %   out.allPressure = raw pressure over all bins
@@ -18,9 +20,15 @@ function [out] = directBin(processedRaw,varargin)
 varargs = reshape(varargin,2,[]);
 p = struct(varargs{:});
 
-
+% make the tables align in time
 phaseInfo = processedRaw.phaseInfo{1};
 sourceTimePressure = processedRaw.sourceTimePressure{1};
+sourceTimePressure = sourceTimePressure(sourceTimePressure.time>=0,:);
+phaseInfo = phaseInfo(1:height(sourceTimePressure),:);
+% 
+% pressure_table = processed_raw.sourceTimePressure{1};
+% pressure_table = pressure_table(pressure_table.time>=0,:);
+% phase_table = processed_raw.phaseInfo{1}(1:height(pressure_table),:);
 
 phase_diff = phaseInfo.diff;
 front = phaseInfo.front;
@@ -65,7 +73,11 @@ end
 x_mean = mean(binned_angle,1);
 y_mean = mean(binned_pressure,1);
 
-out.meanAngle = x_mean;
+if isfield(p,"phaseShift")
+    out.meanAngle = rad2deg(wrapTo360(deg2rad(x_mean+p.phaseShift)));
+else
+    out.meanAngle = x_mean;
+end
 out.meanPressure = y_mean;
 out.allPressure = all_Binned_Pressure(2:end,:);
 out.fluctPressure = out.allPressure-out.meanPressure;
