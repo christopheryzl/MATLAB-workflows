@@ -26,13 +26,16 @@ else
 end
 
 phaseInfo = processedRaw.phaseInfo{1};
-sourceTimePressure = processedRaw.sourceTimePressure{1};
 
 phase_diff = phaseInfo.diff;
 front = phaseInfo.front;
 fs = double(processedRaw.fs);
 rpm = processedRaw.rpm;
 delta_rpm = processedRaw.delta_rpm;
+
+sourceTimePressure = processedRaw.sourceTimePressure{1};
+sourceTimePressure.Pressure = highpass(sourceTimePressure.Pressure,160,fs);
+
 
 % check for if phase range wrapped around zero
 angle_domain = 360/bladeN;
@@ -77,7 +80,7 @@ end
 
 % remove peak ranges that are too short (noise)
 lengths = peaks(:,2)-peaks(:,1)+1;
-peaks = peaks(lengths>1000,:);
+peaks = peaks(lengths>200,:);
 % remove first and last peaks to prevent overflow
 peaks = peaks(1:end,:);
 % ax.ColorOrderIndex=1;
@@ -92,7 +95,7 @@ peaks = peaks(1:end,:);
 % end
 
 % normalised length for a single bin
-normalised_length = ceil(60/(rpm*bladeN)*fs);
+normalised_length = ceil(60/(rpm)*fs);
 
 x_mean = zeros(size(peaks,1),normalised_length);
 y_mean = zeros(size(peaks,1),normalised_length);
@@ -101,7 +104,6 @@ for i = 1:size(peaks,1)
     interval_Phase = phaseInfo(peaks(i,1):peaks(i,2),:);
     [~,time_offset] = min(abs(sourceTimePressure.time-0));
     interval_Pressure = sourceTimePressure(peaks(i,1)+time_offset:peaks(i,2)+time_offset,:);
-    interval_Pressure.Pressure = highpass(interval_Pressure.Pressure,160,fs);
 
     % find wrap cycle
     wrap_idx = find(diff(interval_Phase.front)< -160);
@@ -113,8 +115,8 @@ for i = 1:size(peaks,1)
 
     % calculate and trim bin size
     bin_sizes = ends_idx-starts_idx+1;
-    starts_idx = starts_idx(bin_sizes >= (0.75*60/(rpm*bladeN))/(1/fs));
-    bin_sizes = bin_sizes(bin_sizes >= (0.75*60/(rpm*bladeN))/(1/fs));
+    starts_idx = starts_idx(bin_sizes >= (0.75*60/(rpm))/(1/fs));
+    bin_sizes = bin_sizes(bin_sizes >= (0.75*60/(rpm))/(1/fs));
     %max_len = max(bin_sizes);
     
     %max_len = 500;
@@ -138,6 +140,6 @@ out.meanAngle = mean(x_mean,1);
 out.meanPressure = mean(y_mean,1);
 out.allPressure = all_Interval_Pressure(2:end,:);
 out.fluctPressure = out.allPressure-out.meanPressure;
-out.fs = floor(normalised_length*rpm/(60/bladeN));
+out.fs = floor(normalised_length*rpm/(60));
 end
 
