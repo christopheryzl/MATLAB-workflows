@@ -182,16 +182,30 @@ for k = 1:nSeg
     end
 
     % position on the bin grid, in units of bins, in [0,nb)
-    pb = mod(psiX(idx), opts.Period)/dth;
+    bin_pos = mod(psiX(idx), opts.Period)/dth;
 
     if opts.Splat
-        u  = pb - 0.5;                 % relative to bin centres
-        k0 = floor(u);
-        f  = u - k0;
-        ii = [mod(k0,n_bins)+1; mod(k0+1,n_bins)+1];
-        ww = [1-f; f];
+        % everything happening here is already in the normalised bin units
+        % determine distance relative to bin centres, because we're placing
+        % the data in the middle of the grid points, e.g. 1 | ->1.5<- | 2,
+        % so for grid point 2 it stores at 1.5, the bin_pos is subtracted
+        % by 0.5 as well so the floor function can work properly, the k0 is
+        % the zero-based index of the bin, and the actual bin centre is
+        % k0+0.5.
+        centre_pos  = bin_pos - 0.5;
+        % find the closest grid point below the real data
+        bin_below = floor(centre_pos);
+        % the factor for the grid point above the real data is equal to
+        % the difference between the centre_pos and the bin_below
+        factor_above  = centre_pos - bin_below;
+        % ii contains the closest grid points from the real data, the first
+        % part are those "above" (ceil) and the second part contains those
+        % "below" (floor), the mod are there in case the grid points spill
+        % out of the defined domain
+        ii = [mod(bin_below,n_bins)+1; mod(bin_below+1,n_bins)+1]; 
+        ww = [1-factor_above; factor_above];                      
     else
-        ii = mod(floor(pb),n_bins) + 1;
+        ii = mod(floor(bin_pos),n_bins) + 1;
         ww = ones(numel(idx),1);
     end
     xx = repmat(x_segment, size(ii,1)/numel(idx), 1);
