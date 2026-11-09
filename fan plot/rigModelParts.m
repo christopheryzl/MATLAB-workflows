@@ -1,0 +1,9 @@
+function parts = rigModelParts()
+%RIGMODELPARTS  Default STL parts of the test rig, for drawModel.
+%   Each part has File (on the MATLAB path), Color, and Offset [x y z] in
+%   mm applied to the raw STL points. Parts are drawn in this order.
+parts = struct( ...
+    'File',   {"test assembly 530mm_support.stl", "test assembly 530mm_propellers.stl"}, ...
+    'Color',  {[0.75 0.75 0.75],                  [1 0.5 0]}, ...
+    'Offset', {[0 0 -135],                        [0 0 -135]});
+end
