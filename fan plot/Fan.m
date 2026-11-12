@@ -29,6 +29,7 @@ classdef Fan < handle
 %     t  = fan.tLabels(...)              theta tick labels on an arc
 %     t  = fan.title(str, ...)           title along one edge
 %     h  = fan.addModel(...)             STL model at the fan centre
+%     p  = fan.addModel3D(...)           3D arcs + model sketch at the centre
 %     bb = fan.extent()                  [xmin xmax ymin ymax] incl. labels
 %     [x,y] = fan.toXY(theta, level)     data -> canvas cm
 %
@@ -372,6 +373,45 @@ classdef Fan < handle
             h = drawModel(obj.Canvas.Axes, M, obj.Center + opts.Offset, ...
                 Top=0, FaceAlpha=opts.FaceAlpha, Parts=opts.Parts);
             obj.Handles = [obj.Handles; h(:)];
+        end
+
+        function p = addModel3D(obj, opts)
+            %ADDMODEL3D  3D sketch of the mic arcs + rig model at the fan
+            %   centre (replaces the separate addPerspective axes).
+            %
+            %   Size            outer arc radius of the sketch as a fraction
+            %                   of the fan's inner radius            (0.9)
+            %   Offset          [dx dy] from the fan centre, cm      ([0 0])
+            %   View            [az el]                              ([225 15])
+            %   Arcs            arcs to draw, ids or names           (all)
+            %                   0 "sideline", 1 "upstream",
+            %                   2 "midstream", 3 "downstream"
+            %   Highlight       arc(s) to shade, same ids or names   ([])
+            %   HighlightColor                                       ([.5 .5 .5])
+            %   Model, ModelAlpha, FlowLabel   as micArrayPerspective
+            %
+            %   Returns the FanPerspective, e.g. for p.text(...) additions.
+            arguments
+                obj
+                opts.Size (1,1) double {mustBePositive} = 0.9
+                opts.Offset (1,2) double = [0 0]
+                opts.View (1,2) double = [225 15]
+                opts.Arcs = 0:3
+                opts.Highlight = []
+                opts.HighlightColor (1,3) double = [0.5 0.5 0.5]
+                opts.Model (1,1) logical = true
+                opts.ModelAlpha (1,1) double = 1
+                opts.FlowLabel (1,1) logical = true
+            end
+            % micArrayPerspective draws the arcs out to r = 2 scene units
+            scale = opts.Size*obj.Radius(1)/2;
+            p = micArrayPerspective(obj.Canvas, ...
+                Position=obj.Center + opts.Offset, Scale=scale, View=opts.View, ...
+                Arcs=opts.Arcs, Highlight=opts.Highlight, ...
+                HighlightColor=opts.HighlightColor, ...
+                Model=opts.Model, ModelAlpha=opts.ModelAlpha, ...
+                FlowLabel=opts.FlowLabel);
+            obj.Handles = [obj.Handles; p.Handles(:)];
         end
 
         function bb = extent(obj)
